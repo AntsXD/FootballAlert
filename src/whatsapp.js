@@ -1,10 +1,15 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import pino from "pino";
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
 } from "@whiskeysockets/baileys";
 import qrcode from "qrcode-terminal";
+
+// Baileys needs a real pino instance (it calls logger.child internally).
+// "silent" keeps it quiet while still providing the methods it expects.
+const logger = pino({ level: "silent" });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = path.join(__dirname, "..", "auth_info");
@@ -27,9 +32,10 @@ export function connectWhatsApp({ onReady } = {}) {
 
       const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
+        // Handle the QR ourselves via the connection.update event below
+        // (printQRInTerminal is deprecated in current Baileys).
         browser: ["FootballAlert", "Chrome", "1.0.0"],
-        logger: { level: "silent" }, // silence Baileys' chatty pino logs
+        logger, // real pino instance, silenced
       });
 
       sock.ev.on("creds.update", saveCreds);
