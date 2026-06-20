@@ -1,0 +1,22 @@
+{
+  "name": "football-alert",
+  "version": "1.0.0",
+  "description": "Posts 2026 FIFA World Cup results to a WhatsApp group using your normal WhatsApp account (Baileys). No Business API, no cost.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "link": "node src/index.js --link",
+    "check": "node src/index.js --check",
+    "list": "node src/listGroups.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "pino": "^9.5.0",
+    "dotenv": "^16.4.5",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
