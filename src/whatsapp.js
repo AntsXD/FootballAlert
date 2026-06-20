@@ -8,8 +8,8 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal";
 
 // Baileys needs a real pino instance (it calls logger.child internally).
-// "silent" keeps it quiet while still providing the methods it expects.
-const logger = pino({ level: "silent" });
+// Temporarily at "warn" to see why connections are closing — drop to "silent" once stable.
+const logger = pino({ level: "warn" });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = path.join(__dirname, "..", "auth_info");
@@ -61,6 +61,11 @@ export function connectWhatsApp({ onReady } = {}) {
 
         if (connection === "close") {
           const statusCode = lastDisconnect?.error?.output?.statusCode;
+          console.log(
+            `🔌 Connection closed. statusCode=${statusCode} reason=${
+              lastDisconnect?.error?.message || "?"
+            }`
+          );
           const loggedOut = statusCode === DisconnectReason.loggedOut;
           if (loggedOut) {
             if (!resolved) {
