@@ -26,6 +26,10 @@ const GROUP_ID = process.env.WHATSAPP_GROUP_ID;
 const COMPETITION = process.env.COMPETITION_CODE || "WC";
 const POLL_MS = (Number(process.env.POLL_INTERVAL_MIN) || 2) * 60 * 1000;
 const ALERT_LIVE = (process.env.ALERT_LIVE || "false").toLowerCase() === "true";
+// Only announce matches that FINISHED within the last N hours. This prevents
+// a brand-new bot from spamming the whole tournament history on first run.
+// A WC match lasts ~2h (up to ~2.5h with ET/penalties), so 4h is a safe window.
+const LOOKBACK_HOURS = Number(process.env.LOOKBACK_HOURS || 4);
 // One-time greeting posted to the group when the bot boots. Set
 // BOOT_GREETING=false (or empty) to disable. Supports \n for line breaks.
 const BOOT_GREETING = (process.env.BOOT_GREETING || "")
@@ -55,8 +59,17 @@ async function pollOnce() {
   try {
     const matches = await getCompetitionMatches(COMPETITION);
 
+    // Only consider matches that kicked off within the lookback window, so the
+    // bot never dumps old tournament history (e.g. on a fresh install). A
+    // match "finished" inside this window is one that just ended for real.
+    const cutoff = Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000;
+    const isRecent = (m) => {
+      const kick = m.utcDate ? Date.parse(m.utcDate) : NaN;
+      return Number.isFinite(kick) && kick >= cutoff;
+    };
+
     // --- Full-time alerts ---
-    const finished = getFinishedMatches(matches);
+    const finished = getFinishedMatches(matches).filter(isRecent);
     for (const m of finished) {
       const score = `${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`;
       const key = `${m.id}:ft`;
@@ -70,7 +83,7 @@ async function pollOnce() {
 
     // --- Optional live score-change alerts ---
     if (ALERT_LIVE) {
-      const live = getLiveMatches(matches);
+      const live = getLiveMatches(matches).filter(isRecent);
       for (const m of live) {
         const score = `${m.score?.fullTime?.home ?? m.score?.home ?? 0}-${
           m.score?.fullTime?.away ?? m.score?.away ?? 0
